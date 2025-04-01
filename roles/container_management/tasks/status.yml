@@ -1,0 +1,44 @@
+---
+# Tasks for checking container status
+
+- name: Get information about all containers using podman
+  containers.podman.podman_container_info:
+  register: podman_container_info
+  when: container_engine == "podman"
+  
+- name: Get list of all containers using docker
+  ansible.builtin.command:
+    cmd: docker ps -a --format "{{.Names}}"
+  register: all_containers_docker
+  changed_when: false
+  failed_when: false
+  when: container_engine == "docker"
+  
+- name: Get list of running containers using docker
+  ansible.builtin.command:
+    cmd: docker ps --format "{{.Names}}"
+  register: running_containers_docker
+  changed_when: false
+  failed_when: false
+  when: container_engine == "docker"
+  
+- name: Set fact for containers when using podman
+  ansible.builtin.set_fact:
+    container_all_list: "{{ podman_container_info.containers | map(attribute='Name') | list }}"
+    container_running_list: "{{ podman_container_info.containers | selectattr('State.Running') | map(attribute='Name') | list }}"
+  when: container_engine == "podman"
+
+- name: Set fact for containers when using docker
+  ansible.builtin.set_fact:
+    container_running_list: "{{ running_containers_docker.stdout_lines | select('ne', '') | list }}"
+    container_all_list: "{{ all_containers_docker.stdout_lines | select('ne', '') | list }}"
+  when: container_engine == "docker"
+  
+- name: Display container status
+  ansible.builtin.debug:
+    msg: |
+      Container Status ({{ container_engine }}):
+      =========================================
+      Total Containers: {{ container_all_list | length }}
+      Running Containers: {{ container_running_list | join(', ') if container_running_list | length > 0 else 'None' }}
+  when: container_debug | bool

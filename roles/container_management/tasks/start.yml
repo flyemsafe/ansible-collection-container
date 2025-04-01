@@ -1,0 +1,38 @@
+---
+# Tasks for starting containers
+
+# First get the current status of containers
+- name: Include status tasks
+  ansible.builtin.include_tasks: status.yml
+
+# Start containers that are not running
+- name: Get list of stopped containers
+  ansible.builtin.set_fact:
+    container_stopped_list: "{{ container_all_list | difference(container_running_list) }}"
+  
+- name: Display stopped containers
+  ansible.builtin.debug:
+    msg: "Stopped Containers: {{ container_stopped_list | join(', ') if container_stopped_list | length > 0 else 'None' }}"
+  when: container_debug | bool
+  
+- name: Start containers using podman
+  containers.podman.podman_container:
+    name: "{{ item }}"
+    state: started
+  loop: "{{ container_stopped_list | default([]) }}"
+  register: container_start_result
+  failed_when: false
+  when: 
+    - container_stopped_list | default([]) | length > 0
+    - container_engine == "podman"
+    
+- name: Start containers using docker
+  ansible.builtin.command:
+    cmd: "docker start {{ item }}"
+  loop: "{{ container_stopped_list | default([]) }}"
+  register: container_start_result
+  changed_when: container_start_result.rc == 0
+  failed_when: false
+  when: 
+    - container_stopped_list | default([]) | length > 0
+    - container_engine == "docker"

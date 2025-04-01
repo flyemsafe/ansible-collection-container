@@ -1,0 +1,13 @@
+---
+# Main tasks file for container_management role
+
+# Include the appropriate task file based on the requested action
+- name: Include tasks based on requested action
+  ansible.builtin.include_tasks: "{{ container_action }}.yml"
+  when: container_action in ['status', 'start', 'stop', 'restart']
+
+# If an invalid action is specified, show an error
+- name: Show error for invalid action
+  ansible.builtin.fail:
+    msg: "Invalid container_action specified: {{ container_action }}. Valid options are: status, start, stop, restart."
+  when: container_action not in ['status', 'start', 'stop', 'restart']

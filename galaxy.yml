@@ -1,0 +1,18 @@
+namespace: rhdc
+name: container
+version: 1.0.0
+readme: README.md
+authors:
+  - Rodhouse Datacenter Team
+description: Collection for managing containers using Podman, focusing on rootless containers with proper SELinux contexts
+license:
+  - GPL-3.0-or-later
+tags:
+  - containers
+  - podman
+  - rootless
+  - selinux
+repository: https://github.com/flyemsafe/ansible-collection-container
+documentation: https://github.com/flyemsafe/ansible-collection-container/docs
+homepage: https://github.com/flyemsafe/ansible-collection-container
+issues: https://github.com/flyemsafe/ansible-collection-container/issues

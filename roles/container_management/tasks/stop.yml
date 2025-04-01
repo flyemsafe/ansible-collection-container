@@ -1,0 +1,57 @@
+---
+# Tasks for stopping containers
+
+# First get the current status of containers
+- name: Include status tasks
+  ansible.builtin.include_tasks: status.yml
+
+# Stop running containers
+- name: Stop running containers using podman
+  containers.podman.podman_container:
+    name: "{{ item }}"
+    state: stopped
+    timeout: "{{ container_stop_timeout }}"
+  loop: "{{ container_running_list | default([]) }}"
+  register: container_stop_result
+  failed_when: false
+  when: 
+    - container_running_list | default([]) | length > 0
+    - container_engine == "podman"
+    - not container_force_stop | bool
+    
+- name: Stop running containers using docker
+  ansible.builtin.command:
+    cmd: "docker stop {{ '--time=' + container_stop_timeout | string if container_stop_timeout > 0 else '' }} {{ item }}"
+  loop: "{{ container_running_list | default([]) }}"
+  register: container_stop_result
+  changed_when: container_stop_result.rc == 0
+  failed_when: false
+  when: 
+    - container_running_list | default([]) | length > 0
+    - container_engine == "docker"
+    
+# Force kill containers if needed
+- name: Force kill containers using podman
+  containers.podman.podman_container:
+    name: "{{ item }}"
+    state: stopped
+    kill: true
+  loop: "{{ container_running_list | default([]) }}"
+  register: container_kill_result
+  failed_when: false
+  when: 
+    - container_running_list | default([]) | length > 0
+    - container_engine == "podman"
+    - container_force_stop | bool
+    
+- name: Force kill containers using docker
+  ansible.builtin.command:
+    cmd: "docker kill {{ item }}"
+  loop: "{{ container_running_list | default([]) }}"
+  register: container_kill_result
+  changed_when: container_kill_result.rc == 0
+  failed_when: false
+  when: 
+    - container_running_list | default([]) | length > 0
+    - container_engine == "docker"
+    - container_force_stop | bool

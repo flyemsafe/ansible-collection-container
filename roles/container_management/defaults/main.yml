@@ -1,0 +1,11 @@
+---
+# Default variables for the container_management role
+
+# Container management variables
+container_action: "status"  # Options: status, start, stop, restart
+container_debug: false
+container_engine: "podman"  # Options: podman, docker
+
+# Container options
+container_stop_timeout: 10  # seconds to wait for graceful stop
+container_force_stop: false  # whether to force stop if graceful stop fails

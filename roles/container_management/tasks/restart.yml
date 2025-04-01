@@ -1,0 +1,10 @@
+---
+# Tasks for restarting containers
+
+# First stop the containers
+- name: Include stop tasks
+  ansible.builtin.include_tasks: stop.yml
+
+# Then start the containers
+- name: Include start tasks
+  ansible.builtin.include_tasks: start.yml
