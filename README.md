@@ -1,24 +1,31 @@
-# RHDC.Container Collection
+# Ansible Collection - rhdc.containers
 
-This collection provides roles for managing containers using Podman, focusing on rootless containers with proper SELinux contexts.
+This collection provides roles and plugins for container management on Fedora and similar systems, with a focus on rootless Podman and SELinux compatibility.
 
-## Roles
+## Included Roles
 
-- **container_management**: Manage container lifecycle (status, start, stop) using containers.podman modules
+- **podman**: Installs Podman and dependencies, configures rootless storage and containers configuration for a specified user, and enables user-level podman.socket. See [`docs/podman.md`](docs/podman.md) for complete documentation and usage.
 
-## Installation
+## Documentation
 
-```bash
-ansible-galaxy collection install /path/to/ansible-collection-container -f
+- Full documentation for each role is available in the `docs/` directory.
+- Role-level README files are available in each role's directory.
+
+## Quick Usage Example
+
+```yaml
+- hosts: all
+  roles:
+    - role: rhdc.containers.podman
+      vars:
+        podman_owner: "radmin"
+        podman_graphroot: "/opt/podman/images"
+        podman_runroot: "/opt/podman/runroot"
+        podman_volume_path: "/opt/podman/volumes"
+        podman_enable_user_socket: true
 ```
 
-## Usage
+## Support & Contributions
 
-See the documentation in the `docs` directory for detailed usage instructions.
-
-## Requirements
-
-- Ansible 2.9 or higher
-- Podman installed on target systems
-- containers.podman collection (can be installed with `ansible-galaxy collection install containers.podman`)
-- SELinux properly configured for container operations (if SELinux is enabled)
+- Please see the `galaxy.yml` for authorship and licensing information.
+- Issues and contributions are welcome via the repository.
