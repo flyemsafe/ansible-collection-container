@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+
+# Base configuration for RamaLama
+
+{% if ramalama_gpu_enabled %}
+gpu = true
+{% else %}
+gpu = false
+{% endif %}
+
+# Add other necessary configurations below
+# e.g., model_storage_path = /var/lib/ramalama/models

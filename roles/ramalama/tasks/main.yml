@@ -1,0 +1,34 @@
+---
+- name: Check NVIDIA GPU availability
+  ansible.builtin.debug:
+    msg: "No NVIDIA GPU detected, skipping RamaLama installation and configuration."
+  when: not nvidia_gpu_detected | default(false)
+  tags:
+    - ramalama_skip
+
+- name: Ramalama | Execute tasks only if NVIDIA GPU detected
+  when: nvidia_gpu_detected | default(false)
+  block:
+    - name: Ramalama | Include installation tasks
+      ansible.builtin.include_tasks: install.yml
+      tags:
+        - ramalama_install
+
+    - name: Ramalama | Include GPU configuration tasks
+      ansible.builtin.include_tasks: gpu_config.yml
+      when: ramalama_gpu_enabled
+      tags:
+        - ramalama_gpu_config
+
+    - name: Ramalama | Include testing tasks
+      ansible.builtin.include_tasks: test.yml
+      when: ramalama_test_enabled
+      tags:
+        - ramalama_test
+
+# Optional: Include cleanup tasks if requested
+# - name: Ramalama | Include cleanup tasks
+#   ansible.builtin.include_tasks: cleanup.yml
+#   when: ramalama_cleanup | default(false)
+#   tags:
+#     - ramalama_cleanup

@@ -1,0 +1,16 @@
+---
+# handlers file for podman
+
+- name: Restore SELinux context on /opt/podman/containers
+  become: true
+  ansible.builtin.command: "restorecon -Rv /opt/podman/containers"
+  when: ansible_selinux.status == 'enabled'
+
+- name: Restart podman socket
+  ansible.builtin.systemd:
+    name: podman.socket
+    scope: user
+    state: restarted
+  become: true
+  become_user: "{{ podman_owner }}"
+  # Requires rootless Podman socket restart

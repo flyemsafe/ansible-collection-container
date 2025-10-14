@@ -1,0 +1,112 @@
+---
+# RHEL-specific installation tasks for RamaLama CLI
+
+# Install Python and pip dependencies
+- name: Install Python and pip dependencies
+  ansible.builtin.package:
+    name:
+      - python3
+      - python3-pip
+      - python3-setuptools
+      - python3-wheel
+    state: present
+  become: true # Required for system package installation
+  tags: ramalama_install_deps
+
+# Get latest version from PyPI if needed
+- name: Get latest RamaLama version from PyPI
+  ansible.builtin.uri:
+    url: "https://pypi.org/pypi/ramalama/json"
+    method: GET
+    return_content: true
+    status_code: 200
+  register: pypi_info
+  when: ramalama_version == 'latest'
+  check_mode: false # This task only queries data, safe in check mode
+  tags: ramalama_install_cli
+
+- name: Set RamaLama version fact for pip
+  ansible.builtin.set_fact:
+    ramalama_pip_version: "{{ (ramalama_version == 'latest' and pypi_info.json.info.version is defined) | ternary(pypi_info.json.info.version, ramalama_version) }}"
+  tags: ramalama_install_cli
+
+# Install RamaLama system-wide using pip
+- name: Install RamaLama system-wide using pip
+  ansible.builtin.pip:
+    name: "ramalama{{ '==' + ramalama_version if ramalama_version != 'latest' else '' }}"
+    executable: pip3
+    state: present
+  become: true
+  register: pip_install_result
+  tags: ramalama_install_cli
+
+# Get pip installation path
+- name: Get pip installation path for ramalama
+  ansible.builtin.command: pip3 show ramalama
+  register: pip_show_ramalama
+  changed_when: false
+  failed_when: pip_show_ramalama.rc != 0
+  tags: ramalama_install_cli
+
+- name: Set ramalama_exec_path fact
+  ansible.builtin.set_fact:
+    ramalama_exec_path: "/usr/local/bin/ramalama"
+  tags: ramalama_install_cli
+
+# Ensure binary is globally accessible
+- name: Ensure global symlink for ramalama exists
+  ansible.builtin.file:
+    src: "{{ ramalama_exec_path }}"
+    dest: /usr/local/bin/ramalama
+    state: link
+    force: true
+  when: ramalama_exec_path != '/usr/local/bin/ramalama'
+  become: true
+  tags: ramalama_install_cli
+
+- name: Ensure ramalama is executable
+  ansible.builtin.file:
+    path: /usr/local/bin/ramalama
+    mode: '0755'
+    state: file
+  become: true
+  tags: ramalama_install_cli
+
+# Ensure /usr/local/bin is in PATH
+- name: Ensure /usr/local/bin is in all users' PATH
+  ansible.builtin.lineinfile:
+    path: /etc/profile.d/system-paths.sh
+    line: 'export PATH=$PATH:/usr/local/bin'
+    create: true
+    mode: '0755'
+  become: true
+  tags: ramalama_install_cli
+
+# Verify installation
+- name: Verify ramalama installation
+  ansible.builtin.command: "{{ ramalama_exec_path }} version"
+  register: ramalama_version_check
+  changed_when: false
+  failed_when: ramalama_version_check.rc != 0
+  tags: ramalama_install_cli
+
+# Configuration
+- name: Ensure RamaLama config directory exists
+  ansible.builtin.file:
+    path: "{{ ramalama_config_dir }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+  tags: ramalama_install_config
+
+- name: Create RamaLama configuration file from template
+  ansible.builtin.template:
+    src: ramalama.conf.j2
+    dest: "{{ ramalama_config_dir }}/ramalama.conf"
+    mode: '0644'
+    owner: root
+    group: root
+  become: true
+  tags: ramalama_install_config

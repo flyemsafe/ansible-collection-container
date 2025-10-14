@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Unified GPU & RamaLama test script
+
+# Re-run under sudo if not root
+if [ "$(id -u)" != "0" ]; then
+  echo "Re-running with sudo"
+  exec sudo -E PATH="$PATH" "$0" "$@"
+fi
+
+# Ensure /usr/local/bin is in PATH
+export PATH="$PATH:/usr/local/bin"
+
+set -u
+
+exit_code=0
+
+echo "1. SELinux container_use_devices boolean test"
+if getsebool container_use_devices | grep -q 'on$'; then
+  echo "   PASS: container_use_devices is already on"
+else
+  echo "   Enabling container_use_devices..."
+  if setsebool -P container_use_devices on; then
+    echo "   PASS: container_use_devices enabled"
+  else
+    echo "   FAIL: could not enable container_use_devices"
+    exit_code=$((exit_code | 1))
+  fi
+fi
+
+echo "2. Basic nvidia-smi test via Podman"
+if podman run --rm --device=nvidia.com/gpu=all fedora nvidia-smi; then
+  echo "   PASS"
+else
+  echo "   FAIL"
+  exit_code=$((exit_code | 2))
+fi
+
+echo "3. CUDA sample workload test"
+if podman run --rm --device=nvidia.com/gpu=all docker.io/nvidia/samples:nbody nbody -benchmark -numbodies=16384; then
+  echo "   PASS"
+else
+  echo "   FAIL"
+  exit_code=$((exit_code | 4))
+fi
+
+# Locate RamaLama executable
+# Test 4 & 5: RamaLama CLI tests
+ramalama_exec="/usr/local/bin/ramalama"
+
+echo "4. RamaLama CLI version test"
+if [ -x "$ramalama_exec" ] && "$ramalama_exec" version >/dev/null 2>&1; then
+  echo "   PASS"
+else
+  echo "   FAIL: version command failed or CLI not found at $ramalama_exec"
+  exit_code=$((exit_code | 8))
+fi
+
+echo "5. RamaLama GPU integration test"
+if [ -x "$ramalama_exec" ] && "$ramalama_exec" --dryrun run --device nvidia.com/gpu=all granite >/dev/null 2>&1; then
+  echo "   PASS"
+else
+  echo "   FAIL: run command failed or CLI not found at $ramalama_exec"
+  exit_code=$((exit_code | 16))
+fi
+
+echo "Summary:"
+for i in {1..5}; do
+  flag=$((1 << (i-1)))
+  if (( exit_code & flag )); then
+    echo "Test $i: FAIL"
+  else
+    echo "Test $i: PASS"
+  fi
+done
+
+exit ${exit_code:-0}

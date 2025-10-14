@@ -1,0 +1,77 @@
+---
+# Fedora-specific installation tasks for RamaLama CLI
+
+# Install RamaLama dependencies
+- name: Install RamaLama dependencies
+  ansible.builtin.package:
+    name:
+      - python3-pip
+      - python3-setuptools
+      - python3-wheel
+      - git
+    state: present
+  become: true # Required for system package installation
+  tags: ramalama_install_deps
+
+# Install RamaLama via pip
+- name: Install RamaLama via pip
+  ansible.builtin.pip:
+    name: ramalama
+    state: present
+    extra_args: --user
+  tags: ramalama_install_cli
+
+# Find the installed executable
+- name: Find package-installed ramalama executable path
+  ansible.builtin.shell: |
+    # Try multiple methods to find the ramalama executable
+    which ramalama 2>/dev/null || \
+    find /usr/bin -name ramalama 2>/dev/null
+  register: ramalama_path
+  changed_when: false
+  failed_when: false
+  tags: ramalama_install_cli
+
+- name: Debug ramalama path
+  ansible.builtin.debug:
+    var: ramalama_path
+  tags: ramalama_install_cli
+
+# Create symlink if needed
+- name: Ensure install directory exists
+  ansible.builtin.file:
+    path: "{{ ramalama_install_dir }}"
+    state: directory
+    mode: '0755'
+  become: true # Required to create system directory
+  tags: ramalama_install_cli
+
+- name: Create symlink to RamaLama in install directory (if needed)
+  ansible.builtin.file:
+    src: "{{ ramalama_path.stdout }}"
+    dest: "{{ ramalama_install_dir }}/ramalama"
+    state: link
+  become: true # Required for system directory access
+  when: ramalama_path.stdout is defined and ramalama_path.stdout != '' and ramalama_path.stdout != ramalama_install_dir + '/ramalama'
+  tags: ramalama_install_cli
+
+# Configuration
+- name: Ensure RamaLama config directory exists
+  ansible.builtin.file:
+    path: "{{ ramalama_config_dir }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+  tags: ramalama_install_config
+
+- name: Create RamaLama configuration file from template
+  ansible.builtin.template:
+    src: ramalama.conf.j2
+    dest: "{{ ramalama_config_dir }}/ramalama.conf"
+    mode: '0644'
+    owner: root
+    group: root
+  become: true
+  tags: ramalama_install_config

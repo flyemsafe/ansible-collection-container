@@ -1,0 +1,9 @@
+---
+# Handlers for the rhdc.container.ramalama role
+
+# (No handlers defined yet as RamaLama is not installed as a service)
+# - name: restart ramalama service
+#   ansible.builtin.systemd:
+#     name: ramalama
+#     state: restarted
+#   when: ramalama_service_is_defined # Add appropriate conditions

@@ -1,0 +1,93 @@
+---
+# Runs validation tests for RamaLama and GPU integration
+
+- name: Find ramalama executable
+  ansible.builtin.command: which ramalama
+  register: ramalama_executable
+  changed_when: false
+  failed_when: false
+  tags: ramalama_test_cli
+
+- name: Set ramalama not found if which failed
+  ansible.builtin.set_fact:
+    ramalama_executable: { stdout: "not_found" }
+  when: ramalama_executable.rc != 0
+  tags: ramalama_test_cli
+
+- name: Set ramalama executable fact
+  ansible.builtin.set_fact:
+    ramalama_exec_path: "{{ ramalama_executable.stdout | trim }}"
+  tags: ramalama_test_cli
+
+- name: Debug ramalama executable path
+  ansible.builtin.debug:
+    var: ramalama_executable.stdout
+  tags: ramalama_test_cli
+
+- name: Test RamaLama CLI installation
+  ansible.builtin.command:
+    cmd: "{{ ramalama_exec_path }} version"
+  register: ramalama_version_check
+  changed_when: false
+  failed_when: ramalama_version_check.rc != 0
+  when: ramalama_exec_path != "not_found" and ramalama_exec_path != ""
+  tags: ramalama_test_cli
+
+- name: Skip RamaLama CLI test (executable not found)
+  ansible.builtin.debug:
+    msg: "Skipping RamaLama CLI test - executable not found"
+  when: ramalama_exec_path == "not_found" or ramalama_exec_path == ""
+  tags: ramalama_test_cli
+
+- name: Debug RamaLama version output
+  ansible.builtin.debug:
+    var: ramalama_version_check.stdout_lines
+  when: ramalama_exec_path != "not_found" and ramalama_exec_path != ""
+  tags: ramalama_test_cli
+
+# GPU-specific tests (only if GPU is enabled)
+- name: Deploy unified GPU test script
+  ansible.builtin.template:
+    src: gpu_test.sh.j2
+    dest: /usr/local/bin/ramalama_gpu_test.sh
+    mode: '0755'
+  become: true
+  tags:
+    - ramalama_test_gpu
+
+- name: Run unified GPU test script
+  ansible.builtin.command: /usr/local/bin/ramalama_gpu_test.sh
+  register: ramalama_gpu_test_script
+  changed_when: false
+  failed_when: ramalama_gpu_test_script.rc != 0
+  when: ramalama_gpu_enabled
+  tags:
+    - ramalama_test_gpu
+
+- name: Report GPU test results
+  ansible.builtin.debug:
+    msg: |
+      GPU Test Script Output:
+      {{ ramalama_gpu_test_script.stdout_lines | join('\n') }}
+  when:
+    - ramalama_gpu_enabled
+    - ramalama_gpu_test_script.rc is defined
+  tags:
+    - ramalama_test_gpu
+
+# Placeholder for a more complex RamaLama functional test
+# - name: Run basic RamaLama serve command (Example - might need refinement)
+#   ansible.builtin.command:
+#     cmd: "{{ ramalama_install_dir }}/ramalama serve --model mistral:7b-instruct"
+#     # This might hang, consider async, timeout, or checking logs/status
+#   async: 30 # Run for max 30 seconds
+#   poll: 5   # Check every 5 seconds
+#   register: ramalama_serve_test
+#   changed_when: false
+#   tags: ramalama_test_functional
+#   # Add validation based on expected output or log messages
+
+# - name: Debug RamaLama serve output
+#   ansible.builtin.debug:
+#     var: ramalama_serve_test
+#   tags: ramalama_test_functional

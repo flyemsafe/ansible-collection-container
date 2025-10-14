@@ -1,0 +1,7 @@
+# containers.conf for rootless Podman (managed by Ansible)
+[containers]
+volume_path = "{{ volume_path }}"
+
+# Extra user-supplied containers.conf options
+{% for key, value in containers_conf_extra.items() %}{{ key }} = {{ value | to_json }}
+{% endfor %}

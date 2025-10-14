@@ -1,0 +1,29 @@
+---
+# defaults for rhdc.containers.podman role (collection-qualified, user must set most variables)
+
+# Username and owner for rootless podman configuration
+podman_owner: ""   # REQUIRED: e.g., "radmin"
+
+# Path for podman image storage (graphroot)
+podman_graphroot: ""
+
+# Path for podman runroot
+podman_runroot: ""
+
+# Path for podman volumes
+podman_volume_path: ""
+
+# Should the role install podman and dependencies?
+podman_install: true
+
+# Enable user-level systemd podman.socket?
+podman_enable_user_socket: false
+
+# Optionally provide extra configuration for storage.conf as a dict.
+# To override the default enforced driver = "overlay", set:
+# podman_storage_conf_extra:
+#   driver: '"overlay2"'   # or another valid driver string (must be quoted for ini)
+podman_storage_conf_extra: {}
+
+# Optionally provide extra configuration for containers.conf as a dict
+podman_containers_conf_extra: {}

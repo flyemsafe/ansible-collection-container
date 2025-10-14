@@ -1,0 +1,9 @@
+# storage.conf for rootless Podman (managed by Ansible)
+[storage]
+graphroot = "{{ graphroot }}"
+runroot = "{{ runroot }}"
+{% if 'driver' not in storage_conf_extra %}driver = "overlay"
+{% endif %}
+# Extra user-supplied storage.conf options
+{% for key, value in storage_conf_extra.items() %}{{ key }} = {{ value | to_json }}
+{% endfor %}

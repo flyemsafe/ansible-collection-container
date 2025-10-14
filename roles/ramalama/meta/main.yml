@@ -1,0 +1,35 @@
+---
+galaxy_info:
+  role_name: ramalama
+  author: Rodhouse Datacenter Team
+  description: Installs and configures RamaLama with optional NVIDIA GPU support via CDI.
+  company: Rodhouse Datacenter
+
+  license: Apache-2.0
+
+  min_ansible_version: "2.12"
+
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+    - name: Fedora
+      versions:
+        - "39"
+        - "40"
+
+  galaxy_tags:
+    - ai
+    - ml
+    - gpu
+    - nvidia
+    - podman
+    - container
+    - ramalama
+
+dependencies:
+  # This role depends on a pre-configured NVIDIA GPU driver and environment.
+  # If `ramalama_gpu_enabled` is true, ensure a role like `nvidia_gpu` has run.
+  - role: rhdc.system.nvidia_gpu # Assuming this role exists and handles NVIDIA setup
+    when: ramalama_gpu_enabled

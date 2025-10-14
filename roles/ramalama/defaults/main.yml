@@ -1,0 +1,34 @@
+---
+# Default variables for the rhdc.container.ramalama role
+
+# Installation method: 'auto', 'package', 'pip', or 'source'
+# - 'auto': Use package manager on Fedora, pip on RHEL
+# - 'package': Use dnf/yum package manager
+# - 'pip': Use pip from PyPI
+# - 'source': Build from GitHub source
+ramalama_install_method: auto
+
+# Version of RamaLama to install. 'latest' installs the newest release.
+# For pip installation, this can be a specific version like '0.1.0' or 'latest'
+# For package installation, this is ignored as the package manager determines the version
+ramalama_version: latest
+
+# Directory where the RamaLama CLI binary will be installed.
+# Note: For package/pip installation, this is only used for symlinks if needed
+ramalama_install_dir: /usr/local/bin
+
+# Directory where RamaLama configuration files are stored.
+ramalama_config_dir: /etc/ramalama
+
+# Flag to enable NVIDIA GPU configuration and usage for RamaLama.
+ramalama_gpu_enabled: true
+
+# Flag to enable running test workloads after installation and configuration.
+ramalama_test_enabled: true
+
+# Flag to enable cleanup tasks (removing binaries, configs, images).
+ramalama_cleanup: false
+
+# Python virtual environment path (only used for pip installation)
+# If empty, will install system-wide
+ramalama_venv_path: ""

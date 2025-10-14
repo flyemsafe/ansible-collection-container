@@ -1,0 +1,28 @@
+---
+# Installs Podman and RamaLama CLI
+
+- name: Install Podman
+  ansible.builtin.package:
+    name: podman
+    state: present
+  become: true # Required for system package installation
+  tags: ramalama_install_deps
+
+# =============================================
+# Distribution-specific installation
+# =============================================
+- name: Fail if running on unsupported distribution
+  ansible.builtin.fail:
+    msg: "The RamaLama role currently supports only RedHat and Fedora."
+  when: ansible_distribution not in ['RedHat', 'Fedora']
+  tags: ramalama_install_cli
+
+- name: Include RHEL-specific installation
+  ansible.builtin.include_tasks: install_rhel.yml
+  when: ansible_distribution == "RedHat"
+  tags: ramalama_install_cli
+
+- name: Include Fedora-specific installation
+  ansible.builtin.include_tasks: install_fedora.yml
+  when: ansible_distribution == "Fedora"
+  tags: ramalama_install_cli

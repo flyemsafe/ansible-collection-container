@@ -1,0 +1,86 @@
+---
+# tasks file for podman
+
+- name: "Fail if podman_owner is not set"
+  ansible.builtin.fail:
+    msg: "podman_owner must be set (the user for rootless Podman configuration)."
+  when: podman_owner | length == 0
+
+- name: "Fail if podman_graphroot, podman_runroot, or podman_volume_path are not set"
+  ansible.builtin.fail:
+    msg: "podman_graphroot, podman_runroot, and podman_volume_path must all be set."
+  when: podman_graphroot | length == 0 or podman_runroot | length == 0 or podman_volume_path | length == 0
+
+- name: "Install Podman and rootless dependencies"
+  become: true
+  ansible.builtin.package:
+    name:
+      - podman
+      - fuse-overlayfs
+      - slirp4netns
+    state: present
+  when: podman_install | bool
+
+- name: "Ensure /opt/podman/containers exists with correct ownership and SELinux context"
+  become: true
+  ansible.builtin.file:
+    path: "/opt/podman/containers"
+    state: directory
+    owner: "{{ podman_owner }}"
+    group: "{{ podman_owner }}"
+    mode: '0755'
+
+- name: "Ensure SELinux context for /opt/podman/containers"
+  become: true
+  community.general.sefcontext:
+    target: '/opt/podman/containers(/.*)?'
+    setype: svirt_sandbox_file_t
+    state: present
+  notify: "Restore SELinux context on /opt/podman/containers"
+
+- name: "Restore SELinux context on /opt/podman/containers (immediate)"
+  become: true
+  ansible.builtin.command: "restorecon -Rv /opt/podman/containers"
+  when: ansible_selinux.status == 'enabled'
+
+- name: "Ensure ~/.config/containers exists for podman_owner"
+  ansible.builtin.file:
+    path: "/home/{{ podman_owner }}/.config/containers"
+    state: directory
+    owner: "{{ podman_owner }}"
+    group: "{{ podman_owner }}"
+    mode: '0700'
+
+- name: "Create storage.conf for podman_owner"
+  ansible.builtin.template:
+    src: storage.conf.j2
+    dest: "/home/{{ podman_owner }}/.config/containers/storage.conf"
+    owner: "{{ podman_owner }}"
+    group: "{{ podman_owner }}"
+    mode: '0644'
+  vars:
+    graphroot: "{{ podman_graphroot }}"
+    runroot: "{{ podman_runroot }}"
+    storage_conf_extra: "{{ podman_storage_conf_extra }}"
+
+- name: "Create containers.conf for podman_owner"
+  ansible.builtin.template:
+    src: containers.conf.j2
+    dest: "/home/{{ podman_owner }}/.config/containers/containers.conf"
+    owner: "{{ podman_owner }}"
+    group: "{{ podman_owner }}"
+    mode: '0644'
+  vars:
+    volume_path: "{{ podman_volume_path }}"
+    containers_conf_extra: "{{ podman_containers_conf_extra }}"
+
+- name: "Enable user-level podman.socket (systemd --user)"
+  become: true
+  become_user: "{{ podman_owner }}"
+  ansible.builtin.systemd:
+    name: podman.socket
+    scope: user
+    enabled: true
+    state: started
+  when: podman_enable_user_socket | bool
+  tags: [user-socket]

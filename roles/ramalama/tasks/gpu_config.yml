@@ -1,0 +1,98 @@
+---
+# Configures NVIDIA GPU integration via CDI for Podman
+
+- name: Ensure nvidia-container-toolkit is installed
+  ansible.builtin.package:
+    name: nvidia-container-toolkit
+    state: present
+  become: true # This task requires root privileges to install packages
+  tags: ramalama_gpu_install_toolkit
+
+- name: Define CDI specification file path
+  ansible.builtin.set_fact:
+    nvidia_cdi_spec_file: /etc/cdi/nvidia.yaml
+  tags: ramalama_gpu_config_cdi
+
+- name: Check if NVIDIA CDI specification file exists
+  ansible.builtin.stat:
+    path: "{{ nvidia_cdi_spec_file }}"
+  register: cdi_spec_stat
+  become: true # Need root to check /etc/cdi
+  tags: ramalama_gpu_config_cdi
+
+- name: Ensure CDI directory exists
+  ansible.builtin.file:
+    path: /etc/cdi
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true # This task requires root privileges to create system directories
+  when: not cdi_spec_stat.stat.exists
+  tags: ramalama_gpu_config_cdi
+
+- name: Generate NVIDIA CDI specification
+  ansible.builtin.command:
+    cmd: "nvidia-ctk cdi generate --output={{ nvidia_cdi_spec_file }}"
+    creates: "{{ nvidia_cdi_spec_file }}" # Command module is idempotent due to 'creates'
+  become: true # This task requires root privileges to write to /etc/cdi
+  changed_when: true # Assume changed if command runs (creates ensures it runs only once)
+  tags: ramalama_gpu_config_cdi
+  # Note: Check mode behavior depends on 'creates' file existence.
+
+- name: Download NVIDIA container SELinux policy
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/NVIDIA/dgx-selinux/master/bin/RHEL7/nvidia-container.pp
+    dest: /tmp/nvidia-container.pp
+    mode: '0644'
+  become: true # This task requires root privileges to download and store policy
+  tags: ramalama_gpu_config_selinux
+
+- name: Install NVIDIA container SELinux policy module
+  ansible.builtin.command:
+    cmd: semodule -i /tmp/nvidia-container.pp
+  become: true # This task requires root privileges to install SELinux policy
+  register: semodule_result
+  changed_when: semodule_result.rc == 0
+  failed_when: semodule_result.rc != 0
+  tags: ramalama_gpu_config_selinux
+
+- name: Get list of files needed by prestart hook
+  ansible.builtin.command: nvidia-container-cli -k list
+  register: nvidia_files
+  changed_when: false
+  become: true # This task requires root privileges to run nvidia-container-cli
+  tags: ramalama_gpu_config_selinux
+
+- name: Restore SELinux context for NVIDIA files
+  ansible.builtin.command: restorecon -v -F {{ item }}
+  with_items: "{{ nvidia_files.stdout_lines }}"
+  become: true # This task requires root privileges to modify SELinux contexts
+  changed_when: true
+  tags: ramalama_gpu_config_selinux
+
+- name: Restore SELinux context for device files
+  ansible.builtin.command: restorecon -Rv /dev
+  become: true # This task requires root privileges to modify SELinux contexts
+  changed_when: true
+  tags: ramalama_gpu_config_selinux
+
+- name: Configure GPU access for users
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: render,video
+    append: true
+  become: true # This task requires root privileges to modify user groups
+  tags: ramalama_gpu_config_access
+
+- name: Define old OCI hook file path
+  ansible.builtin.set_fact:
+    nvidia_oci_hook_file: /usr/share/containers/oci/hooks.d/oci-nvidia-hook.json
+  tags: ramalama_gpu_config_cleanup
+
+- name: Remove potentially conflicting OCI hook file
+  ansible.builtin.file:
+    path: "{{ nvidia_oci_hook_file }}"
+    state: absent
+  become: true # This task requires root privileges to remove system files
+  tags: ramalama_gpu_config_cleanup
