@@ -23,6 +23,7 @@ Available variables are listed below, along with default values (see `defaults/m
 | `ramalama_version`       | `latest`          | Version of RamaLama to install (tag name, version number, or `latest`). |
 | `ramalama_install_dir`   | `/usr/local/bin`  | Directory to install the RamaLama CLI binary.                          |
 | `ramalama_config_dir`    | `/etc/ramalama`   | Directory for RamaLama configuration files (`ramalama.conf`).            |
+| `ramalama_models_path`   | Auto-detected     | Model storage path. Uses `/opt/models` if it exists (centralized storage), otherwise `~/.local/share/ramalama`. Use with `--store` flag. |
 | `ramalama_gpu_enabled`   | `true`            | If `true`, configure NVIDIA GPU integration via CDI.                     |
 | `ramalama_test_enabled`  | `true`            | If `true`, run basic CLI and GPU (if enabled) tests after installation. |
 | `ramalama_cleanup`       | `false`           | If `true`, include tasks to remove RamaLama binaries, configs, etc. (Not yet implemented) |
@@ -127,6 +128,44 @@ Available variables are listed below, along with default values (see `defaults/m
 6.  **Test (if enabled):**
     -   Checks if `ramalama --version` runs.
     -   If GPU is enabled, runs `podman run --device=nvidia.com/gpu=all ... nvidia-smi` to verify GPU access via CDI.
+
+## Using Centralized Model Storage
+
+When `ramalama_models_path` is set (automatically configured based on `/opt/models` availability), use the `--store` flag in your ramalama commands to utilize centralized storage:
+
+### Example: Pulling Models
+
+```yaml
+- name: Pull model to centralized storage
+  ansible.builtin.command:
+    cmd: "ramalama pull --store {{ ramalama_models_path }} granite-code:8b"
+  when: ramalama_models_path is defined
+```
+
+### Example: Serving Models
+
+```yaml
+- name: Serve model from centralized storage
+  ansible.builtin.command:
+    cmd: "ramalama serve --store {{ ramalama_models_path }} granite-code:8b"
+  when: ramalama_models_path is defined
+```
+
+### Example: Listing Models in Centralized Storage
+
+```yaml
+- name: List models in centralized storage
+  ansible.builtin.command:
+    cmd: "ramalama list --store {{ ramalama_models_path }}"
+  register: ramalama_models
+  changed_when: false
+```
+
+**Benefits of Centralized Storage:**
+- Shared model storage across multiple AI tools (Ollama, HuggingFace, RamaLama, vLLM)
+- Reduced disk usage by avoiding duplicate model downloads
+- Easier backup and management of large model files
+- Consistent storage location across the infrastructure
 
 ## License
 
