@@ -20,6 +20,10 @@ ramalama_install_dir: /usr/local/bin
 # Directory where RamaLama configuration files are stored.
 ramalama_config_dir: /etc/ramalama
 
+# Model storage path - uses /opt/models if it exists (for centralized model storage),
+# otherwise falls back to user's home directory
+ramalama_models_path: "{{ '/opt/models' if (lookup('pipe', 'test -d /opt/models && echo exists') == 'exists') else ansible_env.HOME + '/.local/share/ramalama' }}"
+
 # Flag to enable NVIDIA GPU configuration and usage for RamaLama.
 ramalama_gpu_enabled: true
 
