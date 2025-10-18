@@ -1,9 +1,9 @@
 ---
 # handlers file for podman
 
-- name: Restore SELinux context on /opt/podman/containers
+- name: "Restore SELinux context on {{ podman_graphroot }}"
   become: true
-  ansible.builtin.command: "restorecon -Rv /opt/podman/containers"
+  ansible.builtin.command: "restorecon -Rv {{ podman_graphroot }}"
   when: ansible_selinux.status == 'enabled'
 
 - name: Restart podman socket
