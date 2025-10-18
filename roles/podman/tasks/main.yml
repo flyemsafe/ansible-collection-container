@@ -36,7 +36,7 @@
     target: '{{ podman_graphroot }}(/.*)?'
     setype: svirt_sandbox_file_t
     state: present
-  notify: "Restore SELinux context on {{ podman_graphroot }}"
+  notify: Restore SELinux context on podman graphroot
 
 - name: "Restore SELinux context on {{ podman_graphroot }} (immediate)"
   become: true

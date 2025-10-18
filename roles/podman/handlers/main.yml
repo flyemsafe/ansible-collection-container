@@ -1,7 +1,7 @@
 ---
 # handlers file for podman
 
-- name: "Restore SELinux context on {{ podman_graphroot }}"
+- name: Restore SELinux context on podman graphroot
   become: true
   ansible.builtin.command: "restorecon -Rv {{ podman_graphroot }}"
   when: ansible_selinux.status == 'enabled'
