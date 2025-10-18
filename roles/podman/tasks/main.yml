@@ -21,26 +21,26 @@
     state: present
   when: podman_install | bool
 
-- name: "Ensure /opt/podman/containers exists with correct ownership and SELinux context"
+- name: "Ensure {{ podman_graphroot }} exists with correct ownership and SELinux context"
   become: true
   ansible.builtin.file:
-    path: "/opt/podman/containers"
+    path: "{{ podman_graphroot }}"
     state: directory
     owner: "{{ podman_owner }}"
     group: "{{ podman_owner }}"
     mode: '0755'
 
-- name: "Ensure SELinux context for /opt/podman/containers"
+- name: "Ensure SELinux context for {{ podman_graphroot }}"
   become: true
   community.general.sefcontext:
-    target: '/opt/podman/containers(/.*)?'
+    target: '{{ podman_graphroot }}(/.*)?'
     setype: svirt_sandbox_file_t
     state: present
-  notify: "Restore SELinux context on /opt/podman/containers"
+  notify: "Restore SELinux context on {{ podman_graphroot }}"
 
-- name: "Restore SELinux context on /opt/podman/containers (immediate)"
+- name: "Restore SELinux context on {{ podman_graphroot }} (immediate)"
   become: true
-  ansible.builtin.command: "restorecon -Rv /opt/podman/containers"
+  ansible.builtin.command: "restorecon -Rv {{ podman_graphroot }}"
   when: ansible_selinux.status == 'enabled'
 
 - name: "Ensure ~/.config/containers exists for podman_owner"
